@@ -1,24 +1,120 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>Hello World - Rust</title>
-    </head>
-    <body>
-        <script type="module">
-            // Import our outputted wasm ES6 module
-            // Which, export default's, an initialization function
-            import init from "./pkg/rust_hello_world.js";
+  <head>
+    <title>Hello World - Rust</title>
+  </head>
+  <body>
+    <canvas
+      width="20"
+      height="20"
+      style="image-rendering: pixelated; width: 100%"
+    >
+    </canvas>
 
-            async function runWasm() {
-                const helloWorld = await init("./pkg/rust_hello_world_bg.wasm");
+    <script type="module">
+      // Import our outputted wasm ES6 module
+      // Which, export default's, an initialization function
+      import init from "./pkg/rust_hello_world.js";
 
-                const addResult = helloWorld.add(24, 24);
+      async function runWasm() {
+        const helloWorld = await init("./pkg/rust_hello_world_bg.wasm");
 
-                document.body.textContent = `Hello World! addResult: ${addResult}`;
-            }
-            runWasm()
-                .catch(e => console.error(e));
+        const addResult = helloWorld.add(24, 24);
 
-        </script>
-    </body>
+        document.body.textContent = `Hello World! addResult: ${addResult}`;
+
+        const result = helloWorld.call_me_from_javascript(24, 24);
+
+        console.log(result); // Should output '72'
+        console.log(helloWorld.ADD_CONSTANT); // Should output 'undefined'
+        console.log(helloWorld.add_integer_with_constant); // Should output 'undefined'
+      }
+
+      async function runMemoryExample() {
+        const rustWasm = await init("./pkg/rust_hello_world_bg.wasm");
+
+        // First, let's have wasm write to our buffer
+        rustWasm.store_value_in_wasm_memory_buffer_index_zero(24);
+
+        // Next, let's create a Uint8Array of our wasm memory
+        let wasmMemory = new Uint8Array(rustWasm.memory.buffer);
+
+        // Then, let's get the pointer to our buffer that is within wasmMemory
+        let bufferPointer = rustWasm.get_wasm_memory_buffer_pointer();
+
+        // Then, let's read the written value at index zero of the buffer,
+        // by accessing the index of wasmMemory[bufferPointer + bufferIndex]
+        console.log(wasmMemory[bufferPointer + 0]); // Should log "24"
+
+        /**
+         * Part two: Write in JS, Read in Wasm
+         */
+        console.log("Write in JS, Read in Wasm, Index 1:");
+
+        // First, let's write to index one of our buffer
+        wasmMemory[bufferPointer + 1] = 25;
+
+        // Then, let's have wasm read index one of the buffer,
+        // and return the result
+        console.log(rustWasm.read_wasm_memory_buffer_and_return_index_one()); // Should log "25"
+
+        /**
+         * NOTE: if we were to continue reading and writing memory,
+         * depending on how the memory is grown by rust, you may have
+         * to re-create the Uint8Array since memory layout could change.
+         * For example, `let wasmMemory = new Uint8Array(rustWasm.memory.buffer);`
+         * In this example, we did not, but be aware this may happen :)
+         */
+
+        console.log("Beyond the end: ", wasmMemory[bufferPointer + 2]);
+
+        console.log(rustWasm.memory.buffer);
+      }
+
+      async function callJsFromWasm() {
+        const rustWasm = await init("./pkg/rust_hello_world_bg.wasm");
+
+        rustWasm.console_log_from_wasm();
+      }
+
+      async function checkerboardExample() {
+        const rustWasm = await init("./pkg/rust_hello_world_bg.wasm");
+
+        const canvasElement = document.querySelector("canvas");
+        const canvasContext = canvasElement.getContext("2d");
+
+        const getDarkValue = () => {
+          return Math.floor(Math.random() * 100);
+        };
+
+        const getLightValue = () => {
+          return Math.floor(Math.random() * 127) + 127;
+        };
+
+        const drawCheckerBoard = () => {
+          const checkerBoardSize = 20;
+          const checkerBoardByteLength = checkerBoardSize * checkerBoardSize * 4;
+
+          // Generate a new checkboard in wasm
+          rustWasm.generate_checker_board(
+            getDarkValue(),
+            getDarkValue(),
+            getDarkValue(),
+            getLightValue(),
+            getLightValue(),
+            getLightValue()
+          );
+
+          const bufferStart = rustWasm.get_output_buffer_pointer();
+          const imageBytes = new Uint8ClampedArray(rustWasm.memory.buffer, bufferStart, checkerBoardByteLength);
+          const imageData = new ImageData(imageBytes, canvasElement.width, canvasElement.height);
+          canvasContext.putImageData(imageData, 0, 0);
+        };
+
+        setInterval(drawCheckerBoard, 1000);
+      }
+
+      checkerboardExample().catch((e) => console.error(e));
+    </script>
+  </body>
 </html>
