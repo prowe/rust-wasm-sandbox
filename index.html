@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Hello World - Rust</title>
+    </head>
+    <body>
+        <script type="module">
+            // Import our outputted wasm ES6 module
+            // Which, export default's, an initialization function
+            import init from "./pkg/rust_hello_world.js";
+
+            async function runWasm() {
+                const helloWorld = await init("./pkg/rust_hello_world_bg.wasm");
+
+                const addResult = helloWorld.add(24, 24);
+
+                document.body.textContent = `Hello World! addResult: ${addResult}`;
+            }
+            runWasm()
+                .catch(e => console.error(e));
+
+        </script>
+    </body>
+</html>
