@@ -202,3 +202,5 @@ As the app gets more complicated it does a good job of generating Javascript bri
 Passing complex types (objects, arrays) is..more complicated. One side has to "own" the type definition and then the other side imports it. It makes sense, though it would have been nice if there was a way to say "This rust function takes an argument of a type that has these fields" and then on the Javascript side we could just pass an object over.
 
 I can see this as being very useful for complicated, CPU intensive calculations. As long as the API between sides isn't very "chatty". I also think there is a lot of promise using WASM outside the browser as a pure executable runtime. Though I'm not sure how much support it has for things like opening a port or reading files. The [WASI Hello World Example](https://wasmbyexample.dev/examples/wasi-hello-world/wasi-hello-world.rust.en-us.html) illustrates writing a file.
+
+I have created a [Github repository](https://github.com/prowe/rust-wasm-sandbox) with my sandboxing.
