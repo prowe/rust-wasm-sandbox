@@ -14,7 +14,7 @@ There is a lot missing from a language like the above. Though a language that co
 
 I went searching for Web Assembly introductions. I kinda wanted to write raw web assembly (like traditional ASM) but got distracted by compiling down [Rust](https://www.rust-lang.org) (an interesting language that is compiled and uses a somewhat uncommon memory model).
 
-### Let's work through (Wasm by Example)[https://wasmbyexample.dev]. Specifically, the [Hello World Rust Example](https://wasmbyexample.dev/examples/hello-world/hello-world.rust.en-us.html).
+### Let's work through [Wasm by Example](https://wasmbyexample.dev). Specifically, the [Hello World Rust Example](https://wasmbyexample.dev/examples/hello-world/hello-world.rust.en-us.html).
 
 I decided I didn't want to do a bunch of setup on my machine, so I fired up [VS Code](https://code.visualstudio.com) and opened a folder using a Rust [Dev Container](https://code.visualstudio.com/docs/remote/containers).
 
@@ -24,7 +24,7 @@ Installing packages via cargo (the rust package manager) takes a while as it see
 
 It seems that the gist of the WASM architecture is to compile down a bunch of code (ie. Rust) into a WASM module and that module "exports" functions that can be called from Javascript. This reminds me of the way [Java invokes native methods using JNI](https://en.wikipedia.org/wiki/Java_Native_Interface).
 
-Looking at the `pkg` directory that was created. It automatically created a `.gitignore` file in there. I like that I don't have to remember to ignore these build artifacts. It also created a type definition file for the exproted rust functions. That's handy too.
+Looking at the `pkg` directory that was created. It automatically created a `.gitignore` file in there. I like that I don't have to remember to ignore these build artifacts. It also created a type definition file for the exported rust functions. That's handy too.
 
 I can't just open `index.html` in a browser because Safari will refuse to load local resources for security reasons. When working on Javascript projects I usually run a simple webserver using `npx` but I didn't want to install that in the container or have to run a mix of in and out of continer stuff. So I went looking for a Rust based web server. Gave up quicky but found the dev container has Python so I ran `python -m SimpleHTTPServer` that I found on [Stack Overflow](https://unix.stackexchange.com/a/32200) and then forwarded port 8000.
 
@@ -36,7 +36,7 @@ Fun fact: my wasm module is only 180 bytes. Pretty small so it must not be packa
 
 ### With that complete, I'm moving on to [WASM Exports](https://wasmbyexample.dev/examples/exports/exports.rust.en-us.html).
 
-So the Wasm by Example site says "Let's import the wasm initialization module from pkg/exports.js" but after running `wasm-pack build --target web` again, I don't have an `exports.js` file in my `pkg` directory. That's probably because I'm using the same project and the example probably assumes a project name of "exports". Bad name for the project on the part of the Wasm by Example site since I mistaked it for a static name that was just always created by the wasm compiler. Knowing this, I can just use the appropriate name (`rust_hello_world` for me) where appropriate.
+So the Wasm by Example site says "Let's import the wasm initialization module from pkg/exports.js" but after running `wasm-pack build --target web` again, I don't have an `exports.js` file in my `pkg` directory. That's probably because I'm using the same project and the example probably assumes a project name of "exports". Bad name for the project on the part of the Wasm by Example site since I mistook it for a static name that was just always created by the wasm compiler. Knowing this, I can just use the appropriate name (`rust_hello_world` for me) where appropriate.
 
 Everything looking good. Moving on to [WebAssembly Linear Memory Overview](https://wasmbyexample.dev/examples/webassembly-linear-memory/webassembly-linear-memory.rust.en-us.html):
 
