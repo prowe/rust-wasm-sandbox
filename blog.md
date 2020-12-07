@@ -89,3 +89,116 @@ const drawCheckerBoard = () => {
 
 Very Trippy
 
+
+I am going to skip the [Audio example](https://wasmbyexample.dev/examples/reading-and-writing-audio/reading-and-writing-audio.rust.en-us.html) and move on to the [Strings example](https://wasmbyexample.dev/examples/strings/strings.rust.en-us.html) to show how we can pass more complicated data structures.
+
+Copy-pasting in the example gets the example working. It looks like we still need to call the init async function before we can use anything in our module. Could be a bit annoying in a real world app. We would need to call this and await its completion before we allow the program to start using modules. In a React/Vue/Angular app this probably means calling init during component render and showing a loading indicator until we are ready. I'm also assuming we dont' want to call it too much because each call probably spins up the Wasm virtual machine.
+
+I'm looking at the `.js` file that is generated to "bridge" our code into the Rust/Wasm code. It generated quite a bit of plumbing to convert a string into a byte buffer and pass it back and forth. It also seems that we don't have to pass the wasm module to the init function:
+```Javascript
+if (typeof input === 'undefined') {
+    input = import.meta.url.replace(/\.js$/, '_bg.wasm');
+}
+```
+Removing the argument to init does indeed work. However, looking at the source code, it does not appear there is any mechanism to avoid loading the module more than once.
+
+Can I pass more complicated structures to Rust, an array maybe? It looks like [Arrays are passed as Boxes](https://rustwasm.github.io/docs/wasm-bindgen/reference/types/boxed-jsvalue-slice.html)
+```Rust
+#[wasm_bindgen]
+pub fn join_strings(strings: Box<[String]>) -> String {
+  let as_vec = vec!(strings);
+  let joined = as_vec.join(", ");
+  return joined;
+}
+
+```
+
+It doesn't seem to like that. How about a struct/object:
+```Rust
+#[wasm_bindgen]
+pub struct Point {
+    pub x: u32,
+    pub y: u32,
+}
+
+#[wasm_bindgen]
+pub fn calc_point_distance(point_a: Point, point_b: Point) -> Point {
+  let result = Point {
+    x: point_b.x - point_a.x,
+    y: point_b.y - point_a.y,
+  };
+  return result;
+}
+```
+
+After adding this code and trying to run `wasm-pack build --target web` I got a dump of a what appears to be raw Wasm text with the error "[wasm-validator error in module] unexpected true: Exported global cannot be mutable, on global$0". I removed the new code and am still getting the same issue. It looks like according to [this issue](https://github.com/rustwasm/wasm-pack/issues/886#issuecomment-667669802) I just need to add stome stuff to my `Cargo.toml` file:
+```Toml
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = ["-Oz", "--enable-mutable-globals"]
+```
+
+Now we're good on the Rust side, next the Javascript side:
+```Javascript
+async function pointExample() {
+    await init();
+
+    const a = {x: 10, y: 5};
+    const b = {x: 12, y: 10};
+
+    const result = calc_point_distance(a, b);
+    console.log('Result: ', result);
+}
+```
+
+That didn't work. Got an error, "Error: expected instance of Point". I guess I have to construct a new "Point" instance. I was worried we would have to create a factory method as illistrated in [this example](https://rustwasm.github.io/docs/wasm-bindgen/reference/types/exported-rust-types.html) but it looks like a Javascript class is created for us. So we'll give this a try:
+```Javascript
+import init, {
+    calc_point_distance,
+    create_point,
+    Point
+} from "./pkg/rust_hello_world.js";
+
+async function pointExample() {
+  await init();
+
+  const a = create_point(10, 5);
+  const b = create_point(12, 10);
+
+  const result = calc_point_distance(a, b);
+  console.log('Result: ', result);
+}
+```
+
+Still no good, "Error: null pointer passed to rust". Looks like I'm creating a factory function?
+```Rust
+#[wasm_bindgen]
+pub fn create_point(x: u32, y: u32) -> Point {
+  return Point {
+    x,
+    y
+  };
+}
+```
+```Javascript
+async function pointExample() {
+  await init();
+
+  const a = create_point(10, 5);
+  const b = create_point(12, 10);
+
+  const result = calc_point_distance(a, b);
+  console.log('Result: ', result.x, result.y);
+}
+```
+
+Now we're looking good.
+
+### Conclusion
+
+Overall, getting a Rust Wasm module working in a Javascript is pretty easy. One install ([wasm-pack](https://github.com/rustwasm/wasm-pack#-quickstart-guide)) that can be easily run inside the Rust Docker container. I like how it doesn't generate a huge amount of boilerplate when only simple parameters are being passed.
+
+As the app gets more complicated it does a good job of generating Javascript bridge code so we can just execute it. In a Typescript project here would be a lot of confidence that we are calling the right function with the right parameters.
+
+Passing complex types (objects, arrays) is..more complicated. One side has to "own" the type definition and then the other side imports it. It makes sense, though it would have been nice if there was a way to say "This rust function takes an argument of a type that has these fields" and then on the Javascript side we could just pass an object over.
+
+I can see this as being very useful for complicated, CPU intensive calculations. As long as the API between sides isn't very "chatty". I also think there is a lot of promise using WASM outside the browser as a pure executable runtime. Though I'm not sure how much support it has for things like opening a port or reading files. The [WASI Hello World Example](https://wasmbyexample.dev/examples/wasi-hello-world/wasi-hello-world.rust.en-us.html) illustrates writing a file.

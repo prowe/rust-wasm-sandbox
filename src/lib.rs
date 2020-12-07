@@ -172,3 +172,35 @@ pub fn generate_checker_board(
     }
   }
 }
+
+// Our function to concatenate the string "Wasm by Example"
+// to the input string. We are using .into(), to convert
+// the rust types of str to a String.
+#[wasm_bindgen]
+pub fn add_wasm_by_example_to_string(input_string: String) -> String {
+  let result = format!("{} {}", input_string, "Wasm by Example");
+  return result.into();
+}
+
+#[wasm_bindgen]
+pub struct Point {
+    pub x: u32,
+    pub y: u32,
+}
+
+#[wasm_bindgen]
+pub fn create_point(x: u32, y: u32) -> Point {
+  return Point {
+    x,
+    y
+  };
+}
+
+#[wasm_bindgen]
+pub fn calc_point_distance(point_a: Point, point_b: Point) -> Point {
+  let result = Point {
+    x: point_b.x - point_a.x,
+    y: point_b.y - point_a.y,
+  };
+  return result;
+}

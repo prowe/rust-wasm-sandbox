@@ -14,7 +14,12 @@
     <script type="module">
       // Import our outputted wasm ES6 module
       // Which, export default's, an initialization function
-      import init from "./pkg/rust_hello_world.js";
+      import init, {
+        add_wasm_by_example_to_string,
+        calc_point_distance,
+        create_point,
+        Point
+      } from "./pkg/rust_hello_world.js";
 
       async function runWasm() {
         const helloWorld = await init("./pkg/rust_hello_world_bg.wasm");
@@ -114,7 +119,27 @@
         setInterval(drawCheckerBoard, 1000);
       }
 
-      checkerboardExample().catch((e) => console.error(e));
+      async function passStringExample() {
+        await init();
+
+        // Call our exported function
+        const helloString = add_wasm_by_example_to_string("Hello from ");
+
+        // Log the result to the console
+        console.log(helloString);
+      }
+
+      async function pointExample() {
+        await init();
+
+        const a = create_point(10, 5);
+        const b = create_point(12, 10);
+
+        const result = calc_point_distance(a, b);
+        console.log('Result: ', result.x, result.y);
+      }
+
+      pointExample().catch((e) => console.error(e));
     </script>
   </body>
 </html>
